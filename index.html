@@ -161,7 +161,7 @@
         <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden animate-fade-in">
             <div class="p-6">
                 <div class="flex justify-between items-center mb-4">
-                    <h3 id="modal-date-title" class="text-xl font-bold text-gray-800">活動紀錄</h3>
+                    <h3 id="modal-date-title" class="text-xl font-bold text-gray-800">紀錄</h3>
                     <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-xl"></i></button>
                 </div>
                 
@@ -170,10 +170,11 @@
                     <input type="hidden" id="record-type">
                     
                     <div>
-                        <label id="label-name" class="block text-sm font-medium mb-1">活動名稱</label>
-                        <input type="text" id="event-name" class="w-full border rounded-lg p-2 focus:ring-2 focus:ring-amber-200 outline-none" placeholder="例如：某某巡迴演唱會">
+                        <label id="label-name" class="block text-sm font-medium mb-1">活動/項目名稱</label>
+                        <input type="text" id="event-name" class="w-full border rounded-lg p-2 focus:ring-2 focus:ring-amber-200 outline-none" placeholder="輸入名稱">
                     </div>
 
+                    <!-- Event Fields -->
                     <div id="event-only-fields">
                         <div class="grid grid-cols-2 gap-4 mb-4">
                             <div>
@@ -207,29 +208,34 @@
                                 <input type="number" id="cost-food" class="w-full border rounded-lg p-2" placeholder="0">
                             </div>
                             <div>
-                                <label class="block text-sm font-medium mb-1">活動現場週邊</label>
+                                <label class="block text-sm font-medium mb-1">現場週邊</label>
                                 <input type="number" id="cost-event-goods" class="w-full border rounded-lg p-2" placeholder="0">
                             </div>
                         </div>
                     </div>
 
-                    <div id="merch-only-fields" class="hidden">
+                    <!-- Pure Merch Fields -->
+                    <div id="merch-only-fields" class="hidden space-y-4">
                         <div>
-                            <label class="block text-sm font-medium mb-1">週邊花費總額</label>
+                            <label class="block text-sm font-medium mb-1">購買清單</label>
+                            <input type="text" id="merch-list" class="w-full border rounded-lg p-2" placeholder="買了哪些？例如：手燈、小卡、海報">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">消費總額</label>
                             <input type="number" id="cost-pure-goods" class="w-full border rounded-lg p-2" placeholder="0">
                         </div>
                     </div>
 
                     <div>
                         <label class="block text-sm font-medium mb-1">照片 (自動壓縮)</label>
-                        <input type="file" id="event-photo" accept="image/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100">
+                        <input type="file" id="event-photo" accept="image/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:bg-stone-50 file:text-stone-700 hover:file:bg-stone-100">
                         <div id="photo-preview" class="mt-2 hidden">
                             <img src="" alt="preview" class="w-full h-32 object-cover rounded-lg border">
                         </div>
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium mb-1">詳細備註</label>
+                        <label class="block text-sm font-medium mb-1">備註</label>
                         <textarea id="event-note" class="w-full border rounded-lg p-2 h-20" placeholder="今天心情如何？"></textarea>
                     </div>
 
@@ -279,7 +285,7 @@
     <script>
         // --- State Management ---
         let currentDate = new Date();
-        let records = JSON.parse(localStorage.getItem('love_records_v2') || '{}');
+        let records = JSON.parse(localStorage.getItem('love_records_v3') || '{}');
         let monthlyConfigs = JSON.parse(localStorage.getItem('love_configs') || '{}');
         let currentPhotoBase64 = '';
         let pendingDateKey = '';
@@ -330,7 +336,7 @@
                     const colorClass = isEvent ? 'text-amber-900' : 'text-blue-600';
                     const dotClass = isEvent ? 'dot-event' : 'dot-merch';
 
-                    content += `<div class="mt-0.5 text-[9px] sm:text-[11px] leading-tight truncate ${colorClass} font-bold">${data.eventName || '活動/購買'}</div>`;
+                    content += `<div class="mt-0.5 text-[10px] sm:text-[11px] leading-tight truncate ${colorClass} font-bold">${data.eventName || '活動'}</div>`;
                     
                     if (totalCost > 0) {
                         content += `<div class="text-[9px] sm:text-[10px] text-gray-500 font-medium">$${totalCost.toLocaleString()}</div>`;
@@ -363,11 +369,9 @@
             }
         }
 
-        // --- Navigation ---
         function prevMonth() { currentDate.setMonth(currentDate.getMonth() - 1); init(); }
         function nextMonth() { currentDate.setMonth(currentDate.getMonth() + 1); init(); }
 
-        // --- Modals Logic ---
         function selectEntryType(dateKey) {
             if (records[dateKey]) {
                 openRecord(records[dateKey].type, dateKey);
@@ -377,9 +381,7 @@
             }
         }
 
-        function closeEntryModal() {
-            document.getElementById('entry-modal').classList.remove('active');
-        }
+        function closeEntryModal() { document.getElementById('entry-modal').classList.remove('active'); }
 
         function openRecord(type, dateKey = null) {
             closeEntryModal();
@@ -392,7 +394,7 @@
             document.getElementById('record-type').value = type;
             
             // UI Toggle
-            document.getElementById('label-name').innerText = type === 'event' ? '活動名稱' : '週邊項目名稱';
+            document.getElementById('label-name').innerText = type === 'event' ? '活動名稱' : '消費主題 (如：官方網購、代購)';
             document.getElementById('event-only-fields').classList.toggle('hidden', type !== 'event');
             document.getElementById('merch-only-fields').classList.toggle('hidden', type !== 'merch');
 
@@ -404,7 +406,10 @@
             document.getElementById('cost-trans').value = data.trans || '';
             document.getElementById('cost-food').value = data.food || '';
             document.getElementById('cost-event-goods').value = data.eventGoods || '';
+            
+            document.getElementById('merch-list').value = data.merchList || '';
             document.getElementById('cost-pure-goods').value = data.pureGoods || '';
+            
             document.getElementById('event-note').value = data.note || '';
             
             const preview = document.getElementById('photo-preview');
@@ -425,10 +430,6 @@
             document.getElementById('event-photo').value = '';
         }
 
-        // --- Config & Stats ---
-        function openConfig() { document.getElementById('config-modal').classList.add('active'); }
-        function closeConfig() { document.getElementById('config-modal').classList.remove('active'); }
-
         function saveRecord() {
             const dateKey = document.getElementById('current-date-key').value;
             const type = document.getElementById('record-type').value;
@@ -447,13 +448,14 @@
                 data.food = Number(document.getElementById('cost-food').value) || 0;
                 data.eventGoods = Number(document.getElementById('cost-event-goods').value) || 0;
             } else {
+                data.merchList = document.getElementById('merch-list').value;
                 data.pureGoods = Number(document.getElementById('cost-pure-goods').value) || 0;
             }
 
             if (!data.eventName) { alert('請填寫名稱！'); return; }
 
             records[dateKey] = data;
-            localStorage.setItem('love_records_v2', JSON.stringify(records));
+            localStorage.setItem('love_records_v3', JSON.stringify(records));
             renderCalendar();
             closeModal();
         }
@@ -462,7 +464,7 @@
             if (confirm('確定要刪除嗎？')) {
                 const dateKey = document.getElementById('current-date-key').value;
                 delete records[dateKey];
-                localStorage.setItem('love_records_v2', JSON.stringify(records));
+                localStorage.setItem('love_records_v3', JSON.stringify(records));
                 renderCalendar();
                 closeModal();
             }
@@ -471,11 +473,8 @@
         function showStats() {
             const year = currentDate.getFullYear();
             const yearRecords = Object.keys(records).filter(key => key.startsWith(`${year}-`));
-            
+            let eventCost = 0, pureMerchCost = 0, eventCount = 0;
             const cities = new Set();
-            let eventCost = 0;
-            let pureMerchCost = 0;
-            let eventCount = 0;
 
             yearRecords.forEach(key => {
                 const r = records[key];
@@ -490,28 +489,34 @@
 
             const content = document.getElementById('stats-content');
             content.innerHTML = `
-                <div class="bg-amber-50 p-4 rounded-xl border border-amber-200">
+                <div class="bg-stone-50 p-4 rounded-xl border border-stone-200 shadow-inner">
                     <p class="text-sm text-gray-600">這一年你參加了</p>
-                    <p class="text-3xl font-bold text-amber-800">${eventCount} <span class="text-lg">場活動</span></p>
+                    <p class="text-3xl font-bold text-stone-800">${eventCount} <span class="text-lg">場活動</span></p>
                 </div>
-                <div class="space-y-2">
-                    <div class="bg-white p-3 rounded-xl border flex justify-between items-center">
-                        <span class="text-gray-500 text-sm">活動總支出</span>
-                        <span class="font-bold text-amber-700">$${eventCost.toLocaleString()}</span>
+                <div class="space-y-3">
+                    <div class="bg-white p-4 rounded-xl border border-amber-100 flex justify-between items-center">
+                        <div class="flex items-center gap-2">
+                            <span class="dot-event"></span>
+                            <span class="text-gray-600 text-sm">活動總支出</span>
+                        </div>
+                        <span class="font-bold text-amber-700 text-lg">$${eventCost.toLocaleString()}</span>
                     </div>
-                    <div class="bg-white p-3 rounded-xl border flex justify-between items-center">
-                        <span class="text-gray-500 text-sm">獨立週邊購買</span>
-                        <span class="font-bold text-blue-600">$${pureMerchCost.toLocaleString()}</span>
+                    <div class="bg-white p-4 rounded-xl border border-blue-100 flex justify-between items-center">
+                        <div class="flex items-center gap-2">
+                            <span class="dot-merch"></span>
+                            <span class="text-gray-600 text-sm">獨立週邊購買</span>
+                        </div>
+                        <span class="font-bold text-blue-600 text-lg">$${pureMerchCost.toLocaleString()}</span>
                     </div>
-                    <div class="bg-stone-800 p-3 rounded-xl flex justify-between items-center text-white">
-                        <span class="text-sm opacity-80">年度總結</span>
-                        <span class="text-xl font-bold">$${(eventCost + pureMerchCost).toLocaleString()}</span>
+                    <div class="bg-stone-800 p-4 rounded-xl flex justify-between items-center text-white shadow-lg">
+                        <span class="text-sm opacity-80">年度總結算</span>
+                        <span class="text-2xl font-bold">$${(eventCost + pureMerchCost).toLocaleString()}</span>
                     </div>
                 </div>
                 <div class="mt-4">
                     <p class="text-sm font-bold mb-2">活動足跡：</p>
                     <div class="flex flex-wrap gap-2">
-                        ${Array.from(cities).map(c => `<span class="bg-amber-50 border border-amber-200 px-2 py-1 rounded-md text-xs">${c}</span>`).join('') || '<span class="text-gray-400">尚無足跡</span>'}
+                        ${Array.from(cities).map(c => `<span class="bg-amber-50 border border-amber-200 px-2 py-1 rounded-md text-xs">${c}</span>`).join('') || '<span class="text-gray-400 text-xs">尚無足跡</span>'}
                     </div>
                 </div>
                 <p class="text-center italic mt-4 text-xs text-gray-500">「有些東西，演唱會可以不看，但週邊不能不收。」</p>
@@ -520,8 +525,9 @@
         }
 
         function closeStats() { document.getElementById('stats-modal').classList.remove('active'); }
+        function openConfig() { document.getElementById('config-modal').classList.add('active'); }
+        function closeConfig() { document.getElementById('config-modal').classList.remove('active'); }
 
-        // --- Utils ---
         function compressImage(file, callback) {
             const reader = new FileReader();
             reader.onload = (e) => {
