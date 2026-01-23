@@ -214,3 +214,355 @@
                     </div>
 
                     <div id="merch-only-fields" class="hidden">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">週邊花費總額</label>
+                            <input type="number" id="cost-pure-goods" class="w-full border rounded-lg p-2" placeholder="0">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-1">照片 (自動壓縮)</label>
+                        <input type="file" id="event-photo" accept="image/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100">
+                        <div id="photo-preview" class="mt-2 hidden">
+                            <img src="" alt="preview" class="w-full h-32 object-cover rounded-lg border">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-1">詳細備註</label>
+                        <textarea id="event-note" class="w-full border rounded-lg p-2 h-20" placeholder="今天心情如何？"></textarea>
+                    </div>
+
+                    <div class="flex gap-2 pt-2">
+                        <button type="button" onclick="saveRecord()" class="flex-1 btn-khaki py-3 rounded-xl font-bold">儲存紀錄</button>
+                        <button type="button" id="delete-btn" onclick="deleteRecord()" class="hidden bg-red-100 text-red-600 px-4 rounded-xl hover:bg-red-200 transition">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Config Modal -->
+    <div id="config-modal" class="modal px-4">
+        <div class="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl animate-fade-in">
+            <h3 class="text-xl font-bold mb-4">自訂本月樣式</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1">更換本月副標題</label>
+                    <input type="text" id="config-subtitle" class="w-full border rounded-lg p-2" placeholder="例如：距離首富差多遠...">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">上傳月曆底圖</label>
+                    <input type="file" id="config-bg" accept="image/*" class="w-full">
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="saveConfig()" class="flex-1 btn-khaki py-2 rounded-lg font-bold">套用</button>
+                    <button onclick="closeConfig()" class="flex-1 bg-gray-100 py-2 rounded-lg">取消</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Modal -->
+    <div id="stats-modal" class="modal px-4">
+        <div class="bg-white w-full max-w-md rounded-2xl p-6 max-h-[80vh] overflow-y-auto shadow-2xl animate-fade-in">
+            <h3 class="text-2xl font-bold mb-4 text-center">年度戰績報告</h3>
+            <div id="stats-content" class="space-y-4">
+                <!-- Injected by JS -->
+            </div>
+            <button onclick="closeStats()" class="w-full mt-6 bg-gray-800 text-white py-2 rounded-lg font-bold">關閉</button>
+        </div>
+    </div>
+
+    <script>
+        // --- State Management ---
+        let currentDate = new Date();
+        let records = JSON.parse(localStorage.getItem('love_records_v2') || '{}');
+        let monthlyConfigs = JSON.parse(localStorage.getItem('love_configs') || '{}');
+        let currentPhotoBase64 = '';
+        let pendingDateKey = '';
+
+        // --- Core Functions ---
+        function init() {
+            renderCalendar();
+            updateStyles();
+        }
+
+        function renderCalendar() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            const display = document.getElementById('current-month-display');
+            display.innerText = `${year} 年 ${month + 1} 月`;
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            
+            const calendarGrid = document.getElementById('calendar-days');
+            calendarGrid.innerHTML = '';
+
+            for (let i = 0; i < firstDay; i++) {
+                const empty = document.createElement('div');
+                empty.className = 'bg-white/40 h-24 sm:h-32';
+                calendarGrid.appendChild(empty);
+            }
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const data = records[dateKey];
+                
+                const cell = document.createElement('div');
+                cell.className = `bg-white h-24 sm:h-32 border-t border-l p-1 cursor-pointer hover:bg-amber-50 transition relative overflow-hidden`;
+                cell.onclick = () => selectEntryType(dateKey);
+
+                let content = `<span class="text-sm font-medium ${new Date(year, month, day).getDay() === 0 ? 'text-red-400' : ''}">${day}</span>`;
+                
+                if (data) {
+                    const isEvent = data.type === 'event';
+                    let totalCost = 0;
+                    if (isEvent) {
+                        totalCost = (data.ticket || 0) + (data.trans || 0) + (data.food || 0) + (data.eventGoods || 0);
+                    } else {
+                        totalCost = data.pureGoods || 0;
+                    }
+                    
+                    const colorClass = isEvent ? 'text-amber-900' : 'text-blue-600';
+                    const dotClass = isEvent ? 'dot-event' : 'dot-merch';
+
+                    content += `<div class="mt-0.5 text-[9px] sm:text-[11px] leading-tight truncate ${colorClass} font-bold">${data.eventName || '活動/購買'}</div>`;
+                    
+                    if (totalCost > 0) {
+                        content += `<div class="text-[9px] sm:text-[10px] text-gray-500 font-medium">$${totalCost.toLocaleString()}</div>`;
+                    }
+
+                    if (data.photo) {
+                        content += `<img src="${data.photo}" class="absolute bottom-0 right-0 w-8 h-8 object-cover opacity-50 rounded-tl-lg">`;
+                    }
+                    content += `<div class="absolute top-1 right-1"><span class="${dotClass}"></span></div>`;
+                }
+
+                cell.innerHTML = content;
+                calendarGrid.appendChild(cell);
+            }
+        }
+
+        function updateStyles() {
+            const monthKey = `${currentDate.getFullYear()}-${currentDate.getMonth()}`;
+            const config = monthlyConfigs[monthKey] || {
+                subtitle: '距離首富差多遠：還有很長一段路',
+                bg: ''
+            };
+            document.getElementById('sub-title').innerText = config.subtitle;
+            const bgContainer = document.getElementById('bg-container');
+            if (config.bg) {
+                bgContainer.style.backgroundImage = `url(${config.bg})`;
+            } else {
+                bgContainer.style.backgroundImage = 'none';
+                bgContainer.style.backgroundColor = 'var(--khaki-base)';
+            }
+        }
+
+        // --- Navigation ---
+        function prevMonth() { currentDate.setMonth(currentDate.getMonth() - 1); init(); }
+        function nextMonth() { currentDate.setMonth(currentDate.getMonth() + 1); init(); }
+
+        // --- Modals Logic ---
+        function selectEntryType(dateKey) {
+            if (records[dateKey]) {
+                openRecord(records[dateKey].type, dateKey);
+            } else {
+                pendingDateKey = dateKey;
+                document.getElementById('entry-modal').classList.add('active');
+            }
+        }
+
+        function closeEntryModal() {
+            document.getElementById('entry-modal').classList.remove('active');
+        }
+
+        function openRecord(type, dateKey = null) {
+            closeEntryModal();
+            const modal = document.getElementById('record-modal');
+            const targetKey = dateKey || pendingDateKey;
+            const data = records[targetKey] || { type: type };
+            
+            document.getElementById('modal-date-title').innerText = `${targetKey} ${type === 'event' ? '活動紀錄' : '週邊購買'}`;
+            document.getElementById('current-date-key').value = targetKey;
+            document.getElementById('record-type').value = type;
+            
+            // UI Toggle
+            document.getElementById('label-name').innerText = type === 'event' ? '活動名稱' : '週邊項目名稱';
+            document.getElementById('event-only-fields').classList.toggle('hidden', type !== 'event');
+            document.getElementById('merch-only-fields').classList.toggle('hidden', type !== 'merch');
+
+            // Form Values
+            document.getElementById('event-name').value = data.eventName || '';
+            document.getElementById('event-city').value = data.city || '';
+            document.getElementById('event-location').value = data.location || '';
+            document.getElementById('cost-ticket').value = data.ticket || '';
+            document.getElementById('cost-trans').value = data.trans || '';
+            document.getElementById('cost-food').value = data.food || '';
+            document.getElementById('cost-event-goods').value = data.eventGoods || '';
+            document.getElementById('cost-pure-goods').value = data.pureGoods || '';
+            document.getElementById('event-note').value = data.note || '';
+            
+            const preview = document.getElementById('photo-preview');
+            currentPhotoBase64 = data.photo || '';
+            if (data.photo) {
+                preview.querySelector('img').src = data.photo;
+                preview.classList.remove('hidden');
+            } else {
+                preview.classList.add('hidden');
+            }
+
+            document.getElementById('delete-btn').classList.toggle('hidden', !records[targetKey]);
+            modal.classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('record-modal').classList.remove('active');
+            document.getElementById('event-photo').value = '';
+        }
+
+        // --- Config & Stats ---
+        function openConfig() { document.getElementById('config-modal').classList.add('active'); }
+        function closeConfig() { document.getElementById('config-modal').classList.remove('active'); }
+
+        function saveRecord() {
+            const dateKey = document.getElementById('current-date-key').value;
+            const type = document.getElementById('record-type').value;
+            const data = {
+                type: type,
+                eventName: document.getElementById('event-name').value,
+                note: document.getElementById('event-note').value,
+                photo: currentPhotoBase64
+            };
+
+            if (type === 'event') {
+                data.city = document.getElementById('event-city').value;
+                data.location = document.getElementById('event-location').value;
+                data.ticket = Number(document.getElementById('cost-ticket').value) || 0;
+                data.trans = Number(document.getElementById('cost-trans').value) || 0;
+                data.food = Number(document.getElementById('cost-food').value) || 0;
+                data.eventGoods = Number(document.getElementById('cost-event-goods').value) || 0;
+            } else {
+                data.pureGoods = Number(document.getElementById('cost-pure-goods').value) || 0;
+            }
+
+            if (!data.eventName) { alert('請填寫名稱！'); return; }
+
+            records[dateKey] = data;
+            localStorage.setItem('love_records_v2', JSON.stringify(records));
+            renderCalendar();
+            closeModal();
+        }
+
+        function deleteRecord() {
+            if (confirm('確定要刪除嗎？')) {
+                const dateKey = document.getElementById('current-date-key').value;
+                delete records[dateKey];
+                localStorage.setItem('love_records_v2', JSON.stringify(records));
+                renderCalendar();
+                closeModal();
+            }
+        }
+
+        function showStats() {
+            const year = currentDate.getFullYear();
+            const yearRecords = Object.keys(records).filter(key => key.startsWith(`${year}-`));
+            
+            const cities = new Set();
+            let eventCost = 0;
+            let pureMerchCost = 0;
+            let eventCount = 0;
+
+            yearRecords.forEach(key => {
+                const r = records[key];
+                if (r.type === 'event') {
+                    if (r.city) cities.add(r.city);
+                    eventCost += (r.ticket + r.trans + r.food + r.eventGoods);
+                    eventCount++;
+                } else {
+                    pureMerchCost += (r.pureGoods || 0);
+                }
+            });
+
+            const content = document.getElementById('stats-content');
+            content.innerHTML = `
+                <div class="bg-amber-50 p-4 rounded-xl border border-amber-200">
+                    <p class="text-sm text-gray-600">這一年你參加了</p>
+                    <p class="text-3xl font-bold text-amber-800">${eventCount} <span class="text-lg">場活動</span></p>
+                </div>
+                <div class="space-y-2">
+                    <div class="bg-white p-3 rounded-xl border flex justify-between items-center">
+                        <span class="text-gray-500 text-sm">活動總支出</span>
+                        <span class="font-bold text-amber-700">$${eventCost.toLocaleString()}</span>
+                    </div>
+                    <div class="bg-white p-3 rounded-xl border flex justify-between items-center">
+                        <span class="text-gray-500 text-sm">獨立週邊購買</span>
+                        <span class="font-bold text-blue-600">$${pureMerchCost.toLocaleString()}</span>
+                    </div>
+                    <div class="bg-stone-800 p-3 rounded-xl flex justify-between items-center text-white">
+                        <span class="text-sm opacity-80">年度總結</span>
+                        <span class="text-xl font-bold">$${(eventCost + pureMerchCost).toLocaleString()}</span>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <p class="text-sm font-bold mb-2">活動足跡：</p>
+                    <div class="flex flex-wrap gap-2">
+                        ${Array.from(cities).map(c => `<span class="bg-amber-50 border border-amber-200 px-2 py-1 rounded-md text-xs">${c}</span>`).join('') || '<span class="text-gray-400">尚無足跡</span>'}
+                    </div>
+                </div>
+                <p class="text-center italic mt-4 text-xs text-gray-500">「有些東西，演唱會可以不看，但週邊不能不收。」</p>
+            `;
+            document.getElementById('stats-modal').classList.add('active');
+        }
+
+        function closeStats() { document.getElementById('stats-modal').classList.remove('active'); }
+
+        // --- Utils ---
+        function compressImage(file, callback) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let w = img.width, h = img.height, max = 800;
+                    if (w > h && w > max) { h *= max/w; w = max; } else if (h > max) { w *= max/h; h = max; }
+                    canvas.width = w; canvas.height = h;
+                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                    callback(canvas.toDataURL('image/jpeg', 0.6));
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        document.getElementById('event-photo').addEventListener('change', function(e) {
+            if (e.target.files[0]) {
+                compressImage(e.target.files[0], (b64) => {
+                    currentPhotoBase64 = b64;
+                    const p = document.getElementById('photo-preview');
+                    p.querySelector('img').src = b64;
+                    p.classList.remove('hidden');
+                });
+            }
+        });
+
+        function saveConfig() {
+            const monthKey = `${currentDate.getFullYear()}-${currentDate.getMonth()}`;
+            const file = document.getElementById('config-bg').files[0];
+            const sub = document.getElementById('config-subtitle').value;
+            const update = (b64) => {
+                monthlyConfigs[monthKey] = { subtitle: sub, bg: b64 || (monthlyConfigs[monthKey]?.bg) };
+                localStorage.setItem('love_configs', JSON.stringify(monthlyConfigs));
+                updateStyles(); closeConfig();
+            };
+            file ? compressImage(file, update) : update();
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
