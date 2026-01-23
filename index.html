@@ -12,6 +12,8 @@
             --khaki-base: #e6dec5;
             --khaki-dark: #b8a98a;
             --brown-text: #5d5440;
+            --merch-color: #60a5fa;
+            --event-color: #d97706;
         }
 
         body {
@@ -38,10 +40,18 @@
             transform: translateY(-2px);
         }
 
-        .dot {
+        .dot-event {
             height: 6px;
             width: 6px;
-            background-color: #d97706;
+            background-color: var(--event-color);
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .dot-merch {
+            height: 6px;
+            width: 6px;
+            background-color: var(--merch-color);
             border-radius: 50%;
             display: inline-block;
         }
@@ -91,7 +101,7 @@
         <header class="text-center mb-8">
             <h1 class="text-4xl font-bold mb-2 tracking-widest" style="color: var(--brown-text);">有多愛</h1>
             <p id="sub-title" class="italic text-lg opacity-80 cursor-pointer hover:underline" onclick="openConfig()">「距離首富差多遠：還有很長一段路」</p>
-            <div class="mt-4 flex justify-center gap-4">
+            <div class="mt-4 flex flex-wrap justify-center gap-3">
                 <button onclick="openConfig()" class="text-sm border border-gray-400 px-3 py-1 rounded-full hover:bg-white transition">換底圖/副標</button>
                 <button onclick="showStats()" class="text-sm border border-gray-400 px-3 py-1 rounded-full hover:bg-white transition">年度統計</button>
             </div>
@@ -120,10 +130,33 @@
             </div>
         </div>
 
+        <div class="flex justify-center gap-4 text-xs opacity-70 mb-4">
+            <div class="flex items-center gap-1"><span class="dot-event"></span> 活動紀錄</div>
+            <div class="flex items-center gap-1"><span class="dot-merch"></span> 獨立週邊購買</div>
+        </div>
+
         <p class="text-center text-xs opacity-50">© 2024 有多愛 - 追星記帳 | 資料儲存於瀏覽器 LocalStorage</p>
     </div>
 
-    <!-- Record Modal -->
+    <!-- Record Entry Selection Modal -->
+    <div id="entry-modal" class="modal px-4">
+        <div class="bg-white w-full max-w-xs rounded-2xl p-6 shadow-2xl animate-fade-in">
+            <h3 class="text-lg font-bold mb-4 text-center">新增紀錄項目</h3>
+            <div class="grid gap-3">
+                <button onclick="openRecord('event')" class="flex items-center justify-between p-4 border rounded-xl hover:bg-amber-50 group">
+                    <span class="font-bold"><i class="fas fa-ticket-alt mr-2 text-amber-600"></i>活動/演唱會</span>
+                    <i class="fas fa-chevron-right text-gray-300 group-hover:text-amber-600"></i>
+                </button>
+                <button onclick="openRecord('merch')" class="flex items-center justify-between p-4 border rounded-xl hover:bg-blue-50 group">
+                    <span class="font-bold"><i class="fas fa-shopping-bag mr-2 text-blue-600"></i>獨立週邊消費</span>
+                    <i class="fas fa-chevron-right text-gray-300 group-hover:text-blue-600"></i>
+                </button>
+                <button onclick="closeEntryModal()" class="mt-2 text-gray-400 text-sm">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Record Form Modal -->
     <div id="record-modal" class="modal px-4">
         <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden animate-fade-in">
             <div class="p-6">
@@ -134,407 +167,50 @@
                 
                 <form id="record-form" class="space-y-4 max-h-[70vh] overflow-y-auto pr-2" onsubmit="event.preventDefault();">
                     <input type="hidden" id="current-date-key">
+                    <input type="hidden" id="record-type">
                     
                     <div>
-                        <label class="block text-sm font-medium mb-1">活動名稱</label>
+                        <label id="label-name" class="block text-sm font-medium mb-1">活動名稱</label>
                         <input type="text" id="event-name" class="w-full border rounded-lg p-2 focus:ring-2 focus:ring-amber-200 outline-none" placeholder="例如：某某巡迴演唱會">
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium mb-1">縣市</label>
-                            <select id="event-city" class="w-full border rounded-lg p-2 outline-none">
-                                <option value="">請選擇</option>
-                                <option value="台北市">台北市</option><option value="新北市">新北市</option>
-                                <option value="桃園市">桃園市</option><option value="台中市">台中市</option>
-                                <option value="台南市">台南市</option><option value="高雄市">高雄市</option>
-                                <option value="基隆市">基隆市</option><option value="新竹市">新竹市</option>
-                                <option value="嘉義市">嘉義市</option><option value="新竹縣">新竹縣</option>
-                                <option value="苗栗縣">苗栗縣</option><option value="彰化縣">彰化縣</option>
-                                <option value="南投縣">南投縣</option><option value="雲林縣">雲林縣</option>
-                                <option value="嘉義縣">嘉義縣</option><option value="屏東縣">屏東縣</option>
-                                <option value="宜蘭縣">宜蘭縣</option><option value="花蓮縣">花蓮縣</option>
-                                <option value="台東縣">台東縣</option><option value="澎湖縣">澎湖縣</option>
-                                <option value="金門縣">金門縣</option><option value="連江縣">連江縣</option>
-                                <option value="海外">海外</option>
-                            </select>
+                    <div id="event-only-fields">
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">縣市</label>
+                                <select id="event-city" class="w-full border rounded-lg p-2 outline-none">
+                                    <option value="">請選擇</option>
+                                    <option value="台北市">台北市</option><option value="新北市">新北市</option>
+                                    <option value="桃園市">桃園市</option><option value="台中市">台中市</option>
+                                    <option value="台南市">台南市</option><option value="高雄市">高雄市</option>
+                                    <option value="海外">海外</option>
+                                    <option value="其他">其他</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">詳細地點</label>
+                                <input type="text" id="event-location" class="w-full border rounded-lg p-2" placeholder="場館名稱">
+                            </div>
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">詳細地點</label>
-                            <input type="text" id="event-location" class="w-full border rounded-lg p-2" placeholder="場館名稱">
-                        </div>
-                    </div>
 
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium mb-1">門票費用</label>
-                            <input type="number" id="cost-ticket" class="w-full border rounded-lg p-2" placeholder="0">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">交通車資</label>
-                            <input type="number" id="cost-trans" class="w-full border rounded-lg p-2" placeholder="0">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">飲食費用</label>
-                            <input type="number" id="cost-food" class="w-full border rounded-lg p-2" placeholder="0">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">週邊收藏</label>
-                            <input type="number" id="cost-goods" class="w-full border rounded-lg p-2" placeholder="0">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">門票費用</label>
+                                <input type="number" id="cost-ticket" class="w-full border rounded-lg p-2" placeholder="0">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">交通車資</label>
+                                <input type="number" id="cost-trans" class="w-full border rounded-lg p-2" placeholder="0">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">飲食費用</label>
+                                <input type="number" id="cost-food" class="w-full border rounded-lg p-2" placeholder="0">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">活動現場週邊</label>
+                                <input type="number" id="cost-event-goods" class="w-full border rounded-lg p-2" placeholder="0">
+                            </div>
                         </div>
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium mb-1">上傳小相片 (自動壓縮保存)</label>
-                        <input type="file" id="event-photo" accept="image/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100">
-                        <div id="photo-preview" class="mt-2 hidden">
-                            <img src="" alt="preview" class="w-full h-32 object-cover rounded-lg border">
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium mb-1">詳細備註</label>
-                        <textarea id="event-note" class="w-full border rounded-lg p-2 h-20" placeholder="今天心情如何？"></textarea>
-                    </div>
-
-                    <div class="flex gap-2 pt-2">
-                        <button type="button" onclick="saveRecord()" class="flex-1 btn-khaki py-3 rounded-xl font-bold">儲存紀錄</button>
-                        <button type="button" id="delete-btn" onclick="deleteRecord()" class="hidden bg-red-100 text-red-600 px-4 rounded-xl hover:bg-red-200 transition">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Config Modal -->
-    <div id="config-modal" class="modal px-4">
-        <div class="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl animate-fade-in">
-            <h3 class="text-xl font-bold mb-4">自訂本月樣式</h3>
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium mb-1">更換本月副標題</label>
-                    <input type="text" id="config-subtitle" class="w-full border rounded-lg p-2" placeholder="例如：距離首富差多遠...">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">上傳月曆底圖</label>
-                    <input type="file" id="config-bg" accept="image/*" class="w-full">
-                    <p class="text-xs text-gray-400 mt-1">* 重新整理網頁也會保存喔</p>
-                </div>
-                <div class="flex gap-2">
-                    <button onclick="saveConfig()" class="flex-1 btn-khaki py-2 rounded-lg font-bold">套用</button>
-                    <button onclick="closeConfig()" class="flex-1 bg-gray-100 py-2 rounded-lg">取消</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Stats Modal -->
-    <div id="stats-modal" class="modal px-4">
-        <div class="bg-white w-full max-w-md rounded-2xl p-6 max-h-[80vh] overflow-y-auto shadow-2xl animate-fade-in">
-            <h3 class="text-2xl font-bold mb-4 text-center">年度戰績報告</h3>
-            <div id="stats-content" class="space-y-4">
-                <!-- Injected by JS -->
-            </div>
-            <button onclick="closeStats()" class="w-full mt-6 bg-gray-800 text-white py-2 rounded-lg font-bold">關閉</button>
-        </div>
-    </div>
-
-    <script>
-        // --- State Management ---
-        let currentDate = new Date();
-        let records = JSON.parse(localStorage.getItem('love_records') || '{}');
-        let monthlyConfigs = JSON.parse(localStorage.getItem('love_configs') || '{}');
-        let currentPhotoBase64 = '';
-
-        // --- Core Functions ---
-        function init() {
-            renderCalendar();
-            updateStyles();
-        }
-
-        function renderCalendar() {
-            const year = currentDate.getFullYear();
-            const month = currentDate.getMonth();
-            const display = document.getElementById('current-month-display');
-            display.innerText = `${year} 年 ${month + 1} 月`;
-
-            const firstDay = new Date(year, month, 1).getDay();
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-            
-            const calendarGrid = document.getElementById('calendar-days');
-            calendarGrid.innerHTML = '';
-
-            // Padding
-            for (let i = 0; i < firstDay; i++) {
-                const empty = document.createElement('div');
-                empty.className = 'bg-white/40 h-24 sm:h-32';
-                calendarGrid.appendChild(empty);
-            }
-
-            // Real Days
-            for (let day = 1; day <= daysInMonth; day++) {
-                const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                const data = records[dateKey];
-                
-                const cell = document.createElement('div');
-                cell.className = `bg-white h-24 sm:h-32 border-t border-l p-1 cursor-pointer hover:bg-amber-50 transition relative overflow-hidden`;
-                cell.onclick = () => openRecord(dateKey);
-
-                let content = `<span class="text-sm font-medium ${new Date(year, month, day).getDay() === 0 ? 'text-red-400' : ''}">${day}</span>`;
-                
-                if (data) {
-                    const totalCost = (data.ticket || 0) + (data.trans || 0) + (data.food || 0) + (data.goods || 0);
-                    
-                    content += `<div class="mt-0.5 text-[9px] sm:text-[11px] leading-tight truncate text-amber-900 font-bold">${data.eventName || '活動'}</div>`;
-                    
-                    if (totalCost > 0) {
-                        content += `<div class="text-[9px] sm:text-[10px] text-gray-500 font-medium">$${totalCost.toLocaleString()}</div>`;
-                    }
-
-                    if (data.photo) {
-                        content += `<img src="${data.photo}" class="absolute bottom-0 right-0 w-8 h-8 object-cover opacity-50 rounded-tl-lg">`;
-                    }
-                    content += `<div class="absolute top-1 right-1"><span class="dot"></span></div>`;
-                }
-
-                cell.innerHTML = content;
-                calendarGrid.appendChild(cell);
-            }
-        }
-
-        function updateStyles() {
-            const monthKey = `${currentDate.getFullYear()}-${currentDate.getMonth()}`;
-            const config = monthlyConfigs[monthKey] || {
-                subtitle: '距離首富差多遠：還有很長一段路',
-                bg: ''
-            };
-
-            document.getElementById('sub-title').innerText = config.subtitle;
-            const bgContainer = document.getElementById('bg-container');
-            if (config.bg) {
-                bgContainer.style.backgroundImage = `url(${config.bg})`;
-            } else {
-                bgContainer.style.backgroundImage = 'none';
-                bgContainer.style.backgroundColor = 'var(--khaki-base)';
-            }
-        }
-
-        // --- Navigation ---
-        function prevMonth() {
-            currentDate.setMonth(currentDate.getMonth() - 1);
-            init();
-        }
-
-        function nextMonth() {
-            currentDate.setMonth(currentDate.getMonth() + 1);
-            init();
-        }
-
-        // --- Modals ---
-        function openRecord(dateKey) {
-            const modal = document.getElementById('record-modal');
-            const data = records[dateKey] || {};
-            
-            document.getElementById('modal-date-title').innerText = `${dateKey} 活動紀錄`;
-            document.getElementById('current-date-key').value = dateKey;
-            document.getElementById('event-name').value = data.eventName || '';
-            document.getElementById('event-city').value = data.city || '';
-            document.getElementById('event-location').value = data.location || '';
-            document.getElementById('cost-ticket').value = data.ticket || '';
-            document.getElementById('cost-trans').value = data.trans || '';
-            document.getElementById('cost-food').value = data.food || '';
-            document.getElementById('cost-goods').value = data.goods || '';
-            document.getElementById('event-note').value = data.note || '';
-            
-            const preview = document.getElementById('photo-preview');
-            currentPhotoBase64 = data.photo || '';
-            if (data.photo) {
-                preview.querySelector('img').src = data.photo;
-                preview.classList.remove('hidden');
-            } else {
-                preview.classList.add('hidden');
-            }
-
-            document.getElementById('delete-btn').classList.toggle('hidden', !data.eventName);
-            modal.classList.add('active');
-        }
-
-        function closeModal() {
-            document.getElementById('record-modal').classList.remove('active');
-            document.getElementById('event-photo').value = ''; // Reset file input
-        }
-
-        function openConfig() {
-            const monthKey = `${currentDate.getFullYear()}-${currentDate.getMonth()}`;
-            const config = monthlyConfigs[monthKey] || {};
-            document.getElementById('config-subtitle').value = config.subtitle || '距離首富差多遠：還有很長一段路';
-            document.getElementById('config-modal').classList.add('active');
-        }
-
-        function closeConfig() {
-            document.getElementById('config-modal').classList.remove('active');
-            document.getElementById('config-bg').value = ''; // Reset file input
-        }
-
-        // --- File Handling & Compression ---
-        function compressImage(file, callback) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const img = new Image();
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    let width = img.width;
-                    let height = img.height;
-                    const max = 800; 
-                    if (width > height && width > max) {
-                        height = (height * max) / width;
-                        width = max;
-                    } else if (height > max) {
-                        width = (width * max) / height;
-                        height = max;
-                    }
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
-                    callback(canvas.toDataURL('image/jpeg', 0.7)); 
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        }
-
-        document.getElementById('event-photo').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                compressImage(file, (base64) => {
-                    currentPhotoBase64 = base64;
-                    const preview = document.getElementById('photo-preview');
-                    preview.querySelector('img').src = base64;
-                    preview.classList.remove('hidden');
-                });
-            }
-        });
-
-        // --- Data Persistence ---
-        function saveRecord() {
-            const dateKey = document.getElementById('current-date-key').value;
-            const data = {
-                eventName: document.getElementById('event-name').value,
-                city: document.getElementById('event-city').value,
-                location: document.getElementById('event-location').value,
-                ticket: Number(document.getElementById('cost-ticket').value) || 0,
-                trans: Number(document.getElementById('cost-trans').value) || 0,
-                food: Number(document.getElementById('cost-food').value) || 0,
-                goods: Number(document.getElementById('cost-goods').value) || 0,
-                note: document.getElementById('event-note').value,
-                photo: currentPhotoBase64
-            };
-
-            if (!data.eventName) {
-                alert('請填寫活動名稱！');
-                return;
-            }
-
-            records[dateKey] = data;
-            try {
-                localStorage.setItem('love_records', JSON.stringify(records));
-                renderCalendar();
-                closeModal();
-            } catch (e) {
-                alert('記憶體空間不足，請嘗試縮小相片或刪除部分紀錄。');
-            }
-        }
-
-        function deleteRecord() {
-            if (confirm('確定要刪除這筆精彩的追星回憶嗎？')) {
-                const dateKey = document.getElementById('current-date-key').value;
-                delete records[dateKey];
-                localStorage.setItem('love_records', JSON.stringify(records));
-                renderCalendar();
-                closeModal();
-            }
-        }
-
-        function saveConfig() {
-            const monthKey = `${currentDate.getFullYear()}-${currentDate.getMonth()}`;
-            const fileInput = document.getElementById('config-bg');
-            const file = fileInput.files[0];
-            const subtitle = document.getElementById('config-subtitle').value;
-
-            const update = (bgBase64) => {
-                monthlyConfigs[monthKey] = {
-                    subtitle: subtitle || '距離首富差多遠：還有很長一段路',
-                    bg: bgBase64 || (monthlyConfigs[monthKey] ? monthlyConfigs[monthKey].bg : '')
-                };
-                try {
-                    localStorage.setItem('love_configs', JSON.stringify(monthlyConfigs));
-                    updateStyles();
-                    closeConfig();
-                } catch (e) {
-                    alert('設定儲存失敗，可能是底圖檔案太大了！');
-                }
-            };
-
-            if (file) {
-                compressImage(file, update);
-            } else {
-                update();
-            }
-        }
-
-        // --- Statistics ---
-        function showStats() {
-            const year = currentDate.getFullYear();
-            const yearRecords = Object.keys(records).filter(key => key.startsWith(`${year}-`));
-            
-            const cities = new Set();
-            let totalCost = 0;
-            let eventCount = 0;
-
-            yearRecords.forEach(key => {
-                const r = records[key];
-                if (r.city) cities.add(r.city);
-                totalCost += (r.ticket + r.trans + r.food + r.goods);
-                eventCount++;
-            });
-
-            const content = document.getElementById('stats-content');
-            content.innerHTML = `
-                <div class="bg-amber-50 p-4 rounded-xl border border-amber-200">
-                    <p class="text-sm text-gray-600">這一年你參加了</p>
-                    <p class="text-3xl font-bold text-amber-800">${eventCount} <span class="text-lg">場活動</span></p>
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="bg-stone-50 p-4 rounded-xl border">
-                        <p class="text-xs text-gray-500">跑遍縣市</p>
-                        <p class="text-xl font-bold">${cities.size} 個</p>
-                    </div>
-                    <div class="bg-stone-50 p-4 rounded-xl border">
-                        <p class="text-xs text-gray-500">總共揮霍</p>
-                        <p class="text-xl font-bold">$${totalCost.toLocaleString()}</p>
-                    </div>
-                </div>
-                <div class="mt-4">
-                    <p class="text-sm font-bold mb-2">足跡列表：</p>
-                    <div class="flex flex-wrap gap-2">
-                        ${Array.from(cities).map(c => `<span class="bg-white border px-2 py-1 rounded-md text-sm">${c}</span>`).join('') || '<span class="text-gray-400">尚無足跡</span>'}
-                    </div>
-                </div>
-                <p class="text-center italic mt-4 text-sm text-gray-500">「錢沒有不見，只是變成了你喜歡的樣子。」</p>
-            `;
-
-            document.getElementById('stats-modal').classList.add('active');
-        }
-
-        function closeStats() {
-            document.getElementById('stats-modal').classList.remove('active');
-        }
-
-        // --- Initial Load ---
-        window.onload = init;
-    </script>
-</body>
-</html>
+                    <div id="merch-only-fields" class="hidden">
